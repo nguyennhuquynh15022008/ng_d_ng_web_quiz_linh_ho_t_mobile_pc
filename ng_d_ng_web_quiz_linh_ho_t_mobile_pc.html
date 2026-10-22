@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ProQuiz Mobile & PC</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 opacity-0 pointer-events-none w-[90%] max-w-sm">
+        <div id="toast-msg" class="px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold text-center text-white bg-slate-900/90 backdrop-blur-md"></div>
+    </div>
+
+    <!-- Header Top Bar -->
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 py-3">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div onclick="app.goHome()" class="flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform">
+                <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                    <i class="fa-solid fa-bolt text-lg"></i>
+                </div>
+                <span class="font-bold text-lg text-slate-900 tracking-tight">ProQuiz</span>
+            </div>
+            <button onclick="app.createNewQuiz()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-plus"></i> <span>Tạo Quiz</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- App Views Container -->
+    <main class="max-w-4xl mx-auto w-full px-4 py-5 flex-grow">
+        
+        <!-- VIEW 1: Quiz List Dashboard -->
+        <section id="view-dashboard" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-slate-900">Danh sách Quiz</h2>
+                <span id="quiz-count-badge" class="text-xs font-semibold text-slate-500 bg-slate-200/60 px-2.5 py-1 rounded-full">0 bài</span>
+            </div>
+            <div id="quiz-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Quiz Cards loaded via JS -->
+            </div>
+        </section>
+
+        <!-- VIEW 2: Quiz Editor -->
+        <section id="view-editor" class="hidden space-y-4">
+            <!-- Header Controls -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+                <div class="flex items-center gap-2">
+                    <button onclick="app.goHome()" class="p-2 text-slate-400 hover:text-slate-600 active:bg-slate-100 rounded-xl">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <input type="text" id="edit-title" onchange="app.updateTitle(this.value)" class="w-full font-bold text-lg text-slate-900 bg-transparent border-b border-transparent focus:border-indigo-600 outline-none px-1 py-0.5" placeholder="Tên bài Quiz...">
+                </div>
+
+                <!-- Config Options -->
+                <div class="pt-2 border-t border-slate-100 flex flex-wrap gap-2 text-xs font-medium">
+                    <button id="btn-toggle-private" onclick="app.togglePrivate()" class="px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all">
+                        <i id="icon-private" class="fa-solid fa-earth-americas"></i> <span id="text-private">Công khai</span>
+                    </button>
+                    <label class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" id="opt-shuffle-q" onchange="app.saveOptions()" class="rounded text-indigo-600"> Đảo câu hỏi
+                    </label>
+                    <label class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" id="opt-shuffle-a" onchange="app.saveOptions()" class="rounded text-indigo-600"> Đảo đáp án
+                    </label>
+                    <label class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" id="opt-instant" onchange="app.saveOptions()" class="rounded text-indigo-600"> Hiện đáp án ngay
+                    </label>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="flex items-center justify-between gap-2 pt-1">
+                    <button onclick="app.shareQuiz()" class="flex-1 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-share-nodes"></i> Chia sẻ link
+                    </button>
+                    <button onclick="app.playCurrentQuiz()" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-play"></i> Làm bài
+                    </button>
+                </div>
+            </div>
+
+            <!-- Questions Editor List -->
+            <div id="questions-list" class="space-y-3"></div>
+
+            <!-- Add Question Buttons -->
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button onclick="app.addQuestion('mcq')" class="py-3 bg-white border border-dashed border-indigo-300 text-indigo-600 rounded-2xl font-semibold text-xs active:bg-indigo-50 flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-list-check"></i> Trắc nghiệm (≤10)
+                </button>
+                <button onclick="app.addQuestion('short')" class="py-3 bg-white border border-dashed border-emerald-300 text-emerald-600 rounded-2xl font-semibold text-xs active:bg-emerald-50 flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-pen-to-square"></i> Câu hỏi ngắn
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW 3: Player Mode -->
+        <section id="view-player" class="hidden max-w-lg mx-auto space-y-4">
+            <!-- Progress Top -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-xs text-slate-500 font-semibold">
+                    <span id="player-title" class="truncate max-w-[200px] text-slate-800">Tên Quiz</span>
+                    <span id="player-progress">1 / 10</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div id="player-bar" class="bg-indigo-600 h-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div id="player-card" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4"></div>
+
+            <!-- Player Pagination -->
+            <div class="flex justify-between items-center gap-3">
+                <button id="btn-prev" onclick="app.navPlay(-1)" class="px-4 py-2.5 bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl disabled:opacity-40">
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Câu trước
+                </button>
+                <button id="btn-next" onclick="app.navPlay(1)" class="px-5 py-2.5 bg-indigo-600 text-white font-semibold text-xs rounded-xl shadow-md">
+                    Câu tiếp <i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW 4: Quiz Result -->
+        <section id="view-result" class="hidden max-w-lg mx-auto space-y-4">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm text-center space-y-4">
+                <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-slate-900">Hoàn thành bài Quiz!</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Kết quả bài làm của bạn</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 max-w-xs mx-auto">
+                    <div class="bg-indigo-50/80 p-3 rounded-2xl border border-indigo-100">
+                        <div id="res-score" class="text-2xl font-black text-indigo-600">0/0</div>
+                        <div class="text-[10px] font-bold text-indigo-500">Điểm số</div>
+                    </div>
+                    <div class="bg-emerald-50/80 p-3 rounded-2xl border border-emerald-100">
+                        <div id="res-percent" class="text-2xl font-black text-emerald-600">0%</div>
+                        <div class="text-[10px] font-bold text-emerald-500">Chính xác</div>
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button onclick="app.restartPlay()" class="flex-1 py-2.5 bg-indigo-600 text-white font-semibold text-xs rounded-xl shadow-sm">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> Làm lại
+                    </button>
+                    <button onclick="app.goHome()" class="flex-1 py-2.5 bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl">
+                        Trang chủ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Review list -->
+            <div id="result-review" class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3"></div>
+        </section>
+
+    </main>
+
+    <!-- Share Link Modal -->
+    <div id="share-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <h4 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-share-nodes text-indigo-600 mr-1.5"></i>Link tham gia làm bài</h4>
+                <button onclick="app.closeShareModal()" class="text-slate-400 hover:text-slate-600 font-bold">&times;</button>
+            </div>
+            <p class="text-xs text-slate-500">Bạn bè mở link sẽ **chỉ có thể làm bài**, không thể xem hay chỉnh sửa đáp án.</p>
+            <input type="text" id="share-url" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-700 outline-none">
+            <button onclick="app.copyShareUrl()" class="w-full py-2.5 bg-indigo-600 text-white font-semibold text-xs rounded-xl shadow-sm active:scale-95 transition-all">
+                <i class="fa-regular fa-copy mr-1"></i> Sao chép đường link
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Application -->
+    <script>
+        class ProQuiz {
+            constructor() {
+                this.quizzes = JSON.parse(localStorage.getItem('proquiz_list') || '[]');
+                this.currentQuiz = null;
+                this.play = { questions: [], index: 0, answers: {}, isShared: false };
+                this.init();
+            }
+
+            init() {
+                if (this.quizzes.length === 0) {
+                    this.quizzes = [this.sampleQuiz()];
+                    this.saveData();
+                }
+                window.addEventListener('hashchange', () => this.checkRoute());
+                this.checkRoute();
+            }
+
+            saveData() {
+                localStorage.setItem('proquiz_list', JSON.stringify(this.quizzes));
+            }
+
+            toast(msg) {
+                const el = document.getElementById('toast');
+                document.getElementById('toast-msg').innerText = msg;
+                el.classList.remove('opacity-0', 'pointer-events-none');
+                setTimeout(() => el.classList.add('opacity-0', 'pointer-events-none'), 2200);
+            }
+
+            checkRoute() {
+                const hash = window.location.hash;
+                if (hash.startsWith('#play=')) {
+                    try {
+                        const json = decodeURIComponent(atob(hash.substring(6)));
+                        const quiz = JSON.parse(json);
+                        this.startPlayMode(quiz, true);
+                    } catch (e) {
+                        this.toast('Link bài Quiz không hợp lệ!');
+                        this.goHome();
+                    }
+                } else {
+                    this.goHome();
+                }
+            }
+
+            switchView(id) {
+                ['view-dashboard', 'view-editor', 'view-player', 'view-result'].forEach(v => {
+                    document.getElementById(v).classList.add('hidden');
+                });
+                document.getElementById(id).classList.remove('hidden');
+                window.scrollTo(0, 0);
+            }
+
+            goHome() {
+                if (window.location.hash) history.pushState("", "", window.location.pathname);
+                this.renderDashboard();
+                this.switchView('view-dashboard');
+            }
+
+            // --- DASHBOARD ---
+            renderDashboard() {
+                const list = document.getElementById('quiz-list');
+                document.getElementById('quiz-count-badge').innerText = `${this.quizzes.length} bài`;
+                list.innerHTML = '';
+
+                this.quizzes.forEach(q => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-3';
+                    card.innerHTML = `
+                        <div class="space-y-1">
+                            <div class="flex items-start justify-between gap-2">
+                                <h3 class="font-bold text-sm text-slate-800 line-clamp-1">${this.esc(q.title)}</h3>
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${q.isPrivate ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">
+                                    ${q.isPrivate ? 'Riêng tư' : 'Công khai'}
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-400">${q.questions.length} câu hỏi</p>
+                        </div>
+                        <div class="flex items-center justify-between border-t pt-2 border-slate-100">
+                            <div class="flex gap-1">
+                                <button onclick="app.editQuiz('${q.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg text-xs"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="app.shareQuizById('${q.id}')" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs"><i class="fa-solid fa-share-nodes"></i></button>
+                                <button onclick="app.deleteQuiz('${q.id}')" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-xs"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                            <button onclick="app.playQuizById('${q.id}')" class="px-3 py-1.5 bg-indigo-600 text-white font-semibold text-xs rounded-xl shadow-sm">Làm bài</button>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+            }
+
+            createNewQuiz() {
+                const newQ = {
+                    id: 'q_' + Date.now(),
+                    title: 'Bài Quiz mới',
+                    isPrivate: false,
+                    options: { shuffleQ: false, shuffleA: false, instant: true },
+                    questions: [{ id: 'q1', type: 'mcq', text: 'Thủ đô Việt Nam là gì?', options: ['Hà Nội', 'Đà Nẵng', 'TP.HCM'], correct: 0 }]
+                };
+                this.quizzes.unshift(newQ);
+                this.saveData();
+                this.editQuiz(newQ.id);
+            }
+
+            deleteQuiz(id) {
+                if (confirm('Bạn muốn xóa bài Quiz này?')) {
+                    this.quizzes = this.quizzes.filter(q => q.id !== id);
+                    this.saveData();
+                    this.renderDashboard();
+                    this.toast('Đã xóa Quiz');
+                }
+            }
+
+            // --- EDITOR ---
+            editQuiz(id) {
+                const quiz = this.quizzes.find(q => q.id === id);
+                if (!quiz) return;
+                this.currentQuiz = JSON.parse(JSON.stringify(quiz));
+                this.renderEditor();
+                this.switchView('view-editor');
+            }
+
+            renderEditor() {
+                const q = this.currentQuiz;
+                document.getElementById('edit-title').value = q.title;
+                document.getElementById('opt-shuffle-q').checked = q.options?.shuffleQ || false;
+                document.getElementById('opt-shuffle-a').checked = q.options?.shuffleA || false;
+                document.getElementById('opt-instant').checked = q.options?.instant !== false;
+
+                const btnPriv = document.getElementById('btn-toggle-private');
+                if (q.isPrivate) {
+                    btnPriv.className = "px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 flex items-center gap-1.5";
+                    document.getElementById('icon-private').className = "fa-solid fa-lock";
+                    document.getElementById('text-private').innerText = "Riêng tư";
+                } else {
+                    btnPriv.className = "px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 flex items-center gap-1.5";
+                    document.getElementById('icon-private').className = "fa-solid fa-earth-americas";
+                    document.getElementById('text-private').innerText = "Công khai";
+                }
+
+                this.renderQuestionsEditor();
+            }
+
+            updateTitle(val) {
+                this.currentQuiz.title = val.trim() || 'Bài Quiz Chưa Tên';
+                this.autoSave();
+            }
+
+            togglePrivate() {
+                this.currentQuiz.isPrivate = !this.currentQuiz.isPrivate;
+                this.renderEditor();
+                this.autoSave();
+            }
+
+            saveOptions() {
+                this.currentQuiz.options = {
+                    shuffleQ: document.getElementById('opt-shuffle-q').checked,
+                    shuffleA: document.getElementById('opt-shuffle-a').checked,
+                    instant: document.getElementById('opt-instant').checked
+                };
+                this.autoSave();
+            }
+
+            renderQuestionsEditor() {
+                const container = document.getElementById('questions-list');
+                container.innerHTML = '';
+
+                this.currentQuiz.questions.forEach((q, idx) => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3';
+
+                    if (q.type === 'mcq') {
+                        let optsHTML = '';
+                        q.options.forEach((opt, oIdx) => {
+                            optsHTML += `
+                                <div class="flex items-center gap-2">
+                                    <input type="radio" name="correct_${q.id}" ${q.correct === oIdx ? 'checked' : ''} onchange="app.setCorrect('${q.id}', ${oIdx})" class="text-indigo-600">
+                                    <input type="text" value="${this.esc(opt)}" onchange="app.updateOpt('${q.id}', ${oIdx}, this.value)" placeholder="Phương án ${oIdx + 1}" class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs outline-none focus:bg-white focus:border-indigo-500">
+                                    ${q.options.length > 2 ? `<button onclick="app.removeOpt('${q.id}', ${oIdx})" class="text-slate-400 hover:text-rose-600 p-1 text-xs"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                                </div>
+                            `;
+                        });
+
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-xs text-indigo-600">Câu ${idx + 1} (Trắc nghiệm)</span>
+                                <button onclick="app.removeQ('${q.id}')" class="text-slate-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-trash"></i> Xóa</button>
+                            </div>
+                            <textarea onchange="app.updateQText('${q.id}', this.value)" rows="2" placeholder="Nội dung câu hỏi..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs outline-none focus:bg-white focus:border-indigo-500">${this.esc(q.text)}</textarea>
+                            <div class="space-y-1.5">
+                                ${optsHTML}
+                                ${q.options.length < 10 ? `<button onclick="app.addOpt('${q.id}')" class="text-[11px] font-semibold text-indigo-600 mt-1"><i class="fa-solid fa-plus"></i> Thêm lựa chọn (${q.options.length}/10)</button>` : ''}
+                            </div>
+                        `;
+                    } else {
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-xs text-emerald-600">Câu ${idx + 1} (Câu hỏi ngắn)</span>
+                                <button onclick="app.removeQ('${q.id}')" class="text-slate-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-trash"></i> Xóa</button>
+                            </div>
+                            <textarea onchange="app.updateQText('${q.id}', this.value)" rows="2" placeholder="Nội dung câu hỏi..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs outline-none focus:bg-white focus:border-indigo-500">${this.esc(q.text)}</textarea>
+                            <input type="text" value="${this.esc(q.answer || '')}" onchange="app.updateAns('${q.id}', this.value)" placeholder="Đáp án đúng (phân cách bằng phẩy)..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs outline-none focus:bg-white focus:border-indigo-500">
+                        `;
+                    }
+                    container.appendChild(card);
+                });
+            }
+
+            addQuestion(type) {
+                this.currentQuiz.questions.push({
+                    id: 'q_' + Date.now(),
+                    type: type,
+                    text: '',
+                    options: type === 'mcq' ? ['Lựa chọn A', 'Lựa chọn B'] : [],
+                    correct: 0,
+                    answer: type === 'short' ? '' : undefined
+                });
+                this.renderQuestionsEditor();
+                this.autoSave();
+            }
+
+            removeQ(qId) {
+                this.currentQuiz.questions = this.currentQuiz.questions.filter(q => q.id !== qId);
+                this.renderQuestionsEditor();
+                this.autoSave();
+            }
+
+            updateQText(qId, val) {
+                const q = this.currentQuiz.questions.find(q => q.id === qId);
+                if (q) q.text = val;
+                this.autoSave();
+            }
+
+            updateOpt(qId, oIdx, val) {
+                const q = this.currentQuiz.questions.find(q => q.id === qId);
+                if (q && q.options) q.options[oIdx] = val;
+                this.autoSave();
+            }
+
+            setCorrect(qId, oIdx) {
+                const q = this.currentQuiz.questions.find(q => q.id === qId);
+                if (q) q.correct = oIdx;
+                this.autoSave();
+            }
+
+            addOpt(qId) {
+                const q = this.currentQuiz.questions.find(q => q.id === qId);
+                if (q && q.options.length < 10) {
+                    q.options.push(`Lựa chọn ${q.options.length + 1}`);
+                    this.renderQuestionsEditor();
+                    this.autoSave();
+                }
+            }
+
+            removeOpt(qId, oIdx) {
+                const q = this.currentQuiz.questions.find(q => q.id === qId);
+                if (q && q.options.length > 2) {
+                    q.options.splice(oIdx, 1);
+                    if (q.correct >= q.options.length) q.correct = q.options.length - 1;
+                    this.renderQuestionsEditor();
+                    this.autoSave();
+                }
+            }
+
+            updateAns(qId, val) {
+                const q = this.currentQuiz.questions.find(q => q.id === qId);
+                if (q) q.answer = val;
+                this.autoSave();
+            }
+
+            autoSave() {
+                const idx = this.quizzes.findIndex(q => q.id === this.currentQuiz.id);
+                if (idx !== -1) this.quizzes[idx] = JSON.parse(JSON.stringify(this.currentQuiz));
+                this.saveData();
+            }
+
+            // --- PLAYER ---
+            playCurrentQuiz() {
+                this.autoSave();
+                this.startPlayMode(this.currentQuiz, false);
+            }
+
+            playQuizById(id) {
+                const q = this.quizzes.find(item => item.id === id);
+                if (q) this.startPlayMode(q, false);
+            }
+
+            startPlayMode(quiz, isShared = false) {
+                let questions = [...quiz.questions];
+                if (quiz.options?.shuffleQ) questions = this.shuffle(questions);
+
+                questions = questions.map(q => {
+                    if (q.type === 'mcq' && quiz.options?.shuffleA) {
+                        const opts = q.options.map((o, i) => ({ o, isC: i === q.correct }));
+                        const shuf = this.shuffle(opts);
+                        return { ...q, options: shuf.map(x => x.o), correct: shuf.findIndex(x => x.isC) };
+                    }
+                    return q;
+                });
+
+                this.play = { quiz, questions, index: 0, answers: {}, isShared };
+                document.getElementById('player-title').innerText = quiz.title;
+                this.renderPlayCard();
+                this.switchView('view-player');
+            }
+
+            renderPlayCard() {
+                const total = this.play.questions.length;
+                const idx = this.play.index;
+                const q = this.play.questions[idx];
+
+                document.getElementById('player-progress').innerText = `${idx + 1} / ${total}`;
+                document.getElementById('player-bar').style.width = `${((idx + 1) / total) * 100}%`;
+
+                document.getElementById('btn-prev').disabled = idx === 0;
+                const btnNext = document.getElementById('btn-next');
+                btnNext.innerHTML = idx === total - 1 ? 'Nộp bài <i class="fa-solid fa-check ml-1"></i>' : 'Câu tiếp <i class="fa-solid fa-chevron-right ml-1"></i>';
+
+                const card = document.getElementById('player-card');
+                const uAns = this.play.answers[q.id];
+                const instant = this.play.quiz.options?.instant !== false;
+
+                let body = '';
+                if (q.type === 'mcq') {
+                    body = '<div class="space-y-2">';
+                    q.options.forEach((opt, oIdx) => {
+                        let btnStyle = "w-full text-left p-3 rounded-xl border text-xs font-semibold flex items-center justify-between ";
+                        if (uAns === undefined) {
+                            btnStyle += "border-slate-200 bg-slate-50 text-slate-700 active:bg-indigo-50";
+                        } else if (instant) {
+                            if (oIdx === q.correct) btnStyle += "border-emerald-500 bg-emerald-50 text-emerald-800";
+                            else if (uAns === oIdx) btnStyle += "border-rose-500 bg-rose-50 text-rose-800";
+                            else btnStyle += "border-slate-200 opacity-50";
+                        } else {
+                            if (uAns === oIdx) btnStyle += "border-indigo-600 bg-indigo-50 text-indigo-900";
+                            else btnStyle += "border-slate-200 text-slate-600";
+                        }
+
+                        body += `
+                            <button onclick="app.selectMCQ('${q.id}', ${oIdx})" ${uAns !== undefined && instant ? 'disabled' : ''} class="${btnStyle}">
+                                <span>${String.fromCharCode(65 + oIdx)}. ${this.esc(opt)}</span>
+                                ${uAns !== undefined && instant && oIdx === q.correct ? '<i class="fa-solid fa-check text-emerald-600"></i>' : ''}
+                            </button>
+                        `;
+                    });
+                    body += '</div>';
+                } else {
+                    body = `
+                        <div class="space-y-2">
+                            <input type="text" id="short-in-${q.id}" value="${this.esc(uAns || '')}" ${uAns !== undefined && instant ? 'disabled' : ''} placeholder="Nhập câu trả lời..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs outline-none">
+                            <button onclick="app.submitShort('${q.id}')" ${uAns !== undefined && instant ? 'disabled' : ''} class="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold">Gửi đáp án</button>
+                            ${uAns !== undefined && instant ? `<p class="text-xs ${this.checkShort(q, uAns) ? 'text-emerald-600' : 'text-rose-600'} font-semibold">Đáp án đúng: ${this.esc(q.answer)}</p>` : ''}
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="space-y-3">
+                        <span class="text-xs font-bold text-indigo-600">Câu ${idx + 1}</span>
+                        <h4 class="font-bold text-sm text-slate-800 leading-relaxed">${this.esc(q.text)}</h4>
+                        ${body}
+                    </div>
+                `;
+            }
+
+            selectMCQ(qId, oIdx) {
+                this.play.answers[qId] = oIdx;
+                this.renderPlayCard();
+            }
+
+            submitShort(qId) {
+                const val = document.getElementById(`short-in-${qId}`)?.value.trim();
+                if (!val) return this.toast('Vui lòng nhập câu trả lời');
+                this.play.answers[qId] = val;
+                this.renderPlayCard();
+            }
+
+            navPlay(step) {
+                const total = this.play.questions.length;
+                const nextIdx = this.play.index + step;
+
+                const currQ = this.play.questions[this.play.index];
+                if (currQ.type === 'short') {
+                    const val = document.getElementById(`short-in-${currQ.id}`)?.value.trim();
+                    if (val) this.play.answers[currQ.id] = val;
+                }
+
+                if (nextIdx >= total) {
+                    this.finishQuiz();
+                } else if (nextIdx >= 0) {
+                    this.play.index = nextIdx;
+                    this.renderPlayCard();
+                }
+            }
+
+            finishQuiz() {
+                let correct = 0;
+                this.play.questions.forEach(q => {
+                    const uAns = this.play.answers[q.id];
+                    if (q.type === 'mcq' && uAns === q.correct) correct++;
+                    else if (q.type === 'short' && this.checkShort(q, uAns)) correct++;
+                });
+
+                const total = this.play.questions.length;
+                const pct = Math.round((correct / total) * 100) || 0;
+
+                document.getElementById('res-score').innerText = `${correct}/${total}`;
+                document.getElementById('res-percent').innerText = `${pct}%`;
+
+                const rev = document.getElementById('result-review');
+                rev.innerHTML = '<h4 class="font-bold text-xs text-slate-800 border-b pb-2">Chi tiết đáp án</h4>';
+
+                this.play.questions.forEach((q, i) => {
+                    const uAns = this.play.answers[q.id];
+                    let isC = q.type === 'mcq' ? uAns === q.correct : this.checkShort(q, uAns);
+                    
+                    rev.innerHTML += `
+                        <div class="text-xs space-y-1 p-2 rounded-xl ${isC ? 'bg-emerald-50/50' : 'bg-rose-50/50'}">
+                            <p class="font-bold text-slate-800">${i + 1}. ${this.esc(q.text)}</p>
+                            <p class="${isC ? 'text-emerald-700' : 'text-rose-700'}">Trả lời: ${this.esc(q.type === 'mcq' ? (q.options[uAns] || 'Chưa chọn') : (uAns || 'Chưa trả lời'))}</p>
+                            ${!isC ? `<p class="text-emerald-700 font-semibold">Đúng: ${this.esc(q.type === 'mcq' ? q.options[q.correct] : q.answer)}</p>` : ''}
+                        </div>
+                    `;
+                });
+
+                this.switchView('view-result');
+            }
+
+            restartPlay() {
+                this.startPlayMode(this.play.quiz, this.play.isShared);
+            }
+
+            checkShort(q, uAns) {
+                if (!uAns || !q.answer) return false;
+                const accepted = q.answer.split(',').map(a => a.trim().toLowerCase());
+                return accepted.includes(uAns.trim().toLowerCase());
+            }
+
+            // --- SHARE ---
+            shareQuiz() {
+                this.autoSave();
+                this.showShareModal(this.currentQuiz);
+            }
+
+            shareQuizById(id) {
+                const q = this.quizzes.find(item => item.id === id);
+                if (q) this.showShareModal(q);
+            }
+
+            showShareModal(quiz) {
+                const json = JSON.stringify(quiz);
+                const encoded = btoa(encodeURIComponent(json));
+                const url = `${window.location.origin}${window.location.pathname}#play=${encoded}`;
+                document.getElementById('share-url').value = url;
+                document.getElementById('share-modal').classList.remove('hidden');
+            }
+
+            closeShareModal() {
+                document.getElementById('share-modal').classList.add('hidden');
+            }
+
+            copyShareUrl() {
+                const input = document.getElementById('share-url');
+                input.select();
+                document.execCommand('copy');
+                this.toast('Đã sao chép đường link!');
+                this.closeShareModal();
+            }
+
+            // --- UTILS ---
+            shuffle(arr) {
+                const a = [...arr];
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            esc(str) {
+                if (!str) return '';
+                return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            }
+
+            sampleQuiz() {
+                return {
+                    id: 'sample_1',
+                    title: 'Đố vui kiến thức chung',
+                    isPrivate: false,
+                    options: { shuffleQ: false, shuffleA: true, instant: true },
+                    questions: [
+                        { id: 'sq1', type: 'mcq', text: 'Thủ đô của Việt Nam là gì?', options: ['Hà Nội', 'Đà Nẵng', 'Huế', 'TP.HCM'], correct: 0 },
+                        { id: 'sq2', type: 'short', text: 'Nước nào rộng nhất thế giới?', answer: 'Nga, Lô Tư' }
+                    ]
+                };
+            }
+        }
+
+        let app;
+        window.addEventListener('DOMContentLoaded', () => { app = new ProQuiz(); });
+    </script>
+</body>
+</html>
