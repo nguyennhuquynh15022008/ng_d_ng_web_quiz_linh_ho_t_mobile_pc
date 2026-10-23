@@ -683,6 +683,24 @@
 
         let app;
         window.addEventListener('DOMContentLoaded', () => { app = new ProQuiz(); });
-    </script>
+     <script>
+  // Kiểm tra nếu link có chứa ?mode=player
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('mode') === 'player') {
+    window.addEventListener('DOMContentLoaded', () => {
+      // Ẩn tất cả các nút có chữ Sửa, Xóa, Thêm, Tạo Quiz
+      document.querySelectorAll('button, .btn, input[type="button"]').forEach(btn => {
+        const text = btn.innerText || btn.value || '';
+        if (text.includes('Sửa') || text.includes('Xóa') || text.includes('Thêm') || text.includes('Tạo Quiz')) {
+          btn.style.display = 'none';
+        }
+      });
+      // Vô hiệu hóa các ô nhập liệu
+      document.querySelectorAll('input[type="text"], textarea').forEach(input => {
+        input.disabled = true;
+      });
+    });
+  }
+</script>    
 </body>
 </html>
